@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Phone infos</title>
+    <!-- Feuille de style mise en page/forme -->
+    <link rel="stylesheet" href="css/styles.css" type="text/css">
+
+    <!-- Script javascript -->
+    <script src="http://code.jquery.com/jquery-2.0.0.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        var mesure = false;
+        var nbmesure = 0;
+        var begin = new Date();
+        var sendInfos = false;
+
+        var x = 0;
+        var y = 0;
+        var z = 0;
+
+        var absolute = 0;
+        var alpha = 0;
+        var beta = 0;
+        var gamma = 0;
+
+        var date = new Date();
+
+        //Talk with the server
+        var socket = io.connect('http://localhost:8080');
+
+        // On affiche une boîte de dialogue quand le serveur nous envoie un "message"
+        socket.on('message', function(message) {
+            alert('Le serveur a un message pour vous : ' + message);
+        })
+
+        // Lorsqu'on clique sur le bouton, on envoie un "message" au serveur
+        $('#poke').click(function() {
+            socket.emit('message', 'Salut serveur, ça va ?');
+        })
+
+        function sendInfosToServer() {
+            //while (sendInfos) {
+            socket.emit('Acc', x + ';' + y + ';' + z);
+
+            delay(0.01); //To wait a little
+            //}
+        }
+        //End Talk server
+
+
+        function processmotion(event) {
+            //X Y Z
+            x = event.accelerationIncludingGravity.x;
+            y = event.accelerationIncludingGravity.y;
+            z = event.accelerationIncludingGravity.z;
+            x = x.toFixed(2);
+            y = y.toFixed(2);
+            z = z.toFixed(2);
+
+            // Modification de la section acceleration dans la page HTML
+            document.getElementById('acceleration').innerHTML = "<ul><li>X : " + x + "</li><li>Y : " + y + "</li><li>Z : " + z + "</li></ul>";
+
+
+
+            if (sendInfos) {
+                socket.emit('Acc', x + ';' + y + ';' + z);
+
+                delay(0.01); //To wait a little
+            }
+        }
+
+        function handleOrientation(event) {
+            //Absolute Alpha Beta Gamma
+            absolute = event.absolute;
+            alpha = event.alpha;
+            beta = event.beta;
+            gamma = event.gamma;
+
+            alpha = alpha.toFixed(2);
+            beta = beta.toFixed(2);
+            gamma = gamma.toFixed(2);
+
+            //Modificatoin de la sectoin d'angle
+            document.getElementById('orientation').innerHTML = "<ul><li>Absolute : " + absolute + "<li>Alpha : " + alpha + "</li><li>Beta : " + beta + "</li><li>Gamma : " + gamma + "</li></ul>";
+        }
+
+        function delay(seconds) {
+            var waitUntil = new Date().getTime() + seconds * 1000;
+            while (new Date().getTime() < waitUntil) true;
+        }
+
+        function accelerometreON() {
+            window.addEventListener("devicemotion", processmotion, true);
+            window.addEventListener("deviceorientation", handleOrientation, true);
+            document.getElementById("acceON").disabled = true;
+            document.getElementById("acceOFF").disabled = false;
+            document.getElementById("Début").disabled = false;
+        }
+
+        function accelerometreOFF() {
+            window.removeEventListener("devicemotion", processmotion, true);
+            document.getElementById("acceON").disabled = false;
+            document.getElementById("acceOFF").disabled = true;
+            document.getElementById("Début").disabled = true;
+            document.getElementById("Fin").disabled = true;
+            document.getElementById("sendData").disabled = true;
+            document.getElementById('acceleration').innerHTML = "<ul><li>X : " + "</li><li>Y : " + "</li><li>Z : " + "</li></ul>";
+        }
+
+        /*
+                function ajout(message) //ajoute au tableau
+                {
+                    delay(0.02);
+                    cls.measures.push([message]);
+                }
+        */
+        function debut() {
+            cls.measures = [];
+            begin = new Date();
+            sendInfos = true;
+            window.addEventListener("devicemotion", mesure, true);
+            document.getElementById("Fin").disabled = false;
+        }
+
+        function fin() {
+            sendInfos = false;
+            document.getElementById("sendData").disabled = false;
+            alert('Mesure terminee');
+        }
+
+    </script>
+</head>
+
+<body>
+
+    <h1>Demobox</h1>
+    <div id="wrap">
+        <h2>Infos</h2>
+    </div>
+    <div id="acceleration">
+        <!-- La section pour afficher les données d'accélération. -->
+        <ul>
+            <li>X : </li>
+            <li>Y : </li>
+            <li>Z : </li>
+        </ul>
+    </div>
+
+    <!-- La section pour afficher les données d'orientation. -->
+    <div id="orientation">
+        <ul>
+            <li>Absolute: </li>
+            <li>Alpha : </li>
+            <li>Beta : </li>
+            <li>Gamma : </li>
+        </ul>
+
+        <br/>
+        <button id="acceON" type="button" onClick="accelerometreON();">Start</button>
+        <button id="acceOFF" type="button" disabled="true" onClick="accelerometreOFF();">Stop</button>
+    </div>
+
+    <button id="Début" type="button" disabled="true" onClick="debut();">debut mesure</button>
+    <button id="Fin" type="button" disabled="true" onClick="fin();">fin mesure</button>
+    
+    <p><button id="Send" type="button" onClick="sendInfosToServer();">Send</button></p>
+
+</body>
+
+</html>
